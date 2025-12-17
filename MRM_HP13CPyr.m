@@ -5,8 +5,7 @@
 %   4) Optionally extract a mid-myocardium ring via radial scaling.
 %   5) Reconstruct / flip-angle-correct 13C images (pyruvate + metabolite).
 %   6) Co-register 13C images to proton reference (translation model).
-%   7) Compute sorted LV blood-pool signal distribution + exponential fit.
-%   8) Sweep adaptive thresholds (alpha) and store thresholded LV voxel coords.
+%   7) Compute sum pyruvate image.
 % Repository:
 %   cor-utsw/hyperpolarized-13C
 % Author:
@@ -142,38 +141,5 @@ matrixSize    = [pyruvate_recon_matrix, pyruvate_recon_matrix];
 SUM_Pyr = zeros(matrixSize); 
 for kkk1 = 1:44
     SUM_Pyr = SUM_Pyr + Pyr_FA{1, kkk1};
-end
-mask2_original_ROI = zeros(matrixSize);
-mask2_original_ROI(sub2ind(matrixSize, coordinates_mask2(:,1), coordinates_mask2(:,2))) = 1;
-%% sorted_signalPyr
-signalPyr_Carbon_LV_ProtonROI = arrayfun(@(x, y) SUM_Pyr(y, x), coordinates_mask2(:, 2), coordinates_mask2(:, 1)); 
-max_signalPyr_Carbon_LV_ProtonROI = max(signalPyr_Carbon_LV_ProtonROI);
-min_signalPyr_Carbon_LV_ProtonROI = min(signalPyr_Carbon_LV_ProtonROI);
-sorted_signalPyr = sort(signalPyr_Carbon_LV_ProtonROI, 'descend');
-x_valuesPyr = 1:length(sorted_signalPyr);
-log_signalPyr = log(sorted_signalPyr);
-XPyr = [ones(length(x_valuesPyr), 1), x_valuesPyr(:)]; % The equation becomes: log(y) = log(A) - B*x
-paramsPyr = XPyr \ log_signalPyr(:);  % Solve for [log(A), -B]
-log_A_maxPyr = paramsPyr(1);  % log(A)
-A_maxPyr = exp(log_A_maxPyr);     % Convert log(A) back to A
-fitted_signal_expPyr = A_maxPyr * exp(-Pyr_decay * x_valuesPyr);
-%% ADAPTIVE THRESHOLD SWEEP (α) 
-% Threshold definition: alpha from 1% to 63%
-%   threshold_E_1 = alpha * I_max 
-%   cutoff        = threshold_E_1 + I_min
-%   keep voxels where SUM_Pyr > cutoff
-% Then restrict to LV mask2_original to keep only LV ROI voxels.
-%% Cutoff formula for Blood pool ROI detection
-for i = 1:length(thresholds)
-   current_threshold = thresholds(i);
-   threshold_E_1 = current_threshold * max_signalPyr_Carbon_LV_ProtonROI;
-   max_min_LV = threshold_E_1 + min_signalPyr_Carbon_LV_ProtonROI;
-   background_Thresh = SUM_Pyr > max_min_LV;
-   threshold_E_1_all(i) = threshold_E_1;
-   max_min_LV_all(i) = max_min_LV;
-   background_Thresh_all{i} = background_Thresh;
-   maskThresh_threshold = mask2_original_ROI & background_Thresh;
-   [y_coords, x_coords] = find(maskThresh_threshold);
-   coords_all{i} = [y_coords, x_coords];  % Exported ROI coordinates are applied to the pyruvate image for subsequent analysis.
 end
 %%
