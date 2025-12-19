@@ -15,5 +15,4 @@ For further questions, please contact
 Fatemeh Khashami, PhD  
 Email: Fatemeh.Khashami@UTSouthwestern.edu
 
-
 The example codes are available on https://github.com/cor-utsw/hyperpolarized-13C.
