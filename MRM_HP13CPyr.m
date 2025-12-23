@@ -2,11 +2,11 @@
 %   1) Load a proton DICOM image (reference anatomy).
 %   2) Interpolate proton image onto the 13C (pyruvate/metabolite) grid.
 %   3) Draw LV Epicardial + Endocardial ROIs manually and derive myocardium.
-%   4) Optionally extract a mid-myocardium ring via radial scaling.
+%   4) Extract a mid-myocardium ring.
 %   5) Reconstruct / flip-angle-correct 13C images (pyruvate + metabolite).
 %   6) Co-register 13C images to proton reference (translation model).
 %   7) Compute sorted LV blood-pool signal distribution.
-%   8) Sweep adaptive thresholds (alpha) and store thresholded LV voxel coords.
+%   8) Cutoff formula.
 % Repository:
 %   cor-utsw/hyperpolarized-13C
 % Author:
@@ -24,9 +24,6 @@ pyruvate_FOV_mm        = 220;
 pyruvate_recon_matrix  = 100;
 proton_FOV_mm          = 350;
 proton_recon_matrix    = 432;
-% --- Mid-myocardium ring scaling (tune per subject) ---
-scaling_factor_out = 0.10;   % outward expansion around mean radius
-scaling_factor_in  = 0.10;   % inward contraction around mean radius
 % --- LV endocardium ellipse radius (pixels on 100x100 interpolated proton) ---
 newRadius_px = 9;            % adjust based on heart size
 % --- Flip angles (degrees) ---
@@ -80,33 +77,10 @@ binaryMasks.binaryMask2 = binaryMask2;
 coordinates_mask1 = [row1, col1];          % epicardium coords
 [row2, col2]       = find(binaryMask2);
 coordinates_mask2  = [row2, col2];          % endocardium coords (LV blood pool ROI)
-%% MYOCARDIUM 
+%% mid-MYOCARDIUM 
 myoMask = binaryMask1 & ~binaryMask2;
 [rowM, colM]     = find(myoMask);
 myo_coordinates  = [rowM, colM];
-%%  MID-MYO RING (OPTIONAL)
-% Create an annulus around the myocardium centroid using mean radius.
-centroid_rc     = mean(myo_coordinates, 1);                 % [row, col]
-distances       = sqrt(sum((myo_coordinates - centroid_rc).^2, 2));
-mean_distance   = mean(distances);
-inner_radius    = (1 - scaling_factor_in)  * mean_distance;
-outer_radius    = (1 + scaling_factor_out) * mean_distance;
-keep_inner      = distances > inner_radius;
-keep_outer      = distances < outer_radius;
-mid_myo_coordinates = myo_coordinates(keep_inner & keep_outer, :);
-figure('Name','Myocardium + Mid-Myocardium Ring');
-imagesc(fixedImage);
-axis image; axis on;
-try
-    colormap turbo;
-catch
-    colormap parula;
-end
-hold on;
-plot(myo_coordinates(:,2),      myo_coordinates(:,1),      'ob');  % myocardium (blue circles)
-plot(mid_myo_coordinates(:,2),  mid_myo_coordinates(:,1),  '*r');  % mid-myo (red stars)
-title('Myocardium (blue) and Mid-Myocardium Ring (red)');
-hold off;
 %% FLIP ANGLE CORRECTION FACTORS 
 % Store sin(FA) factors separately to avoid overwriting degrees.
 sinFA_Pyr = sin(deg2rad(flipAngle_Pyr_deg));
@@ -144,7 +118,6 @@ for kkk1 = 1:44
     SUM_Pyr = SUM_Pyr + Pyr_FA{1, kkk1};
 end
 mask2_original_ROI = zeros(matrixSize);
-mask2_original_ROI(sub2ind(matrixSize, coordinates_mask2(:,1), coordinates_mask2(:,2))) = 1;
 %% sorted_signalPyr
 signalPyr_Carbon_LV_ProtonROI = arrayfun(@(x, y) SUM_Pyr(y, x), coordinates_mask2(:, 2), coordinates_mask2(:, 1)); 
 max_signalPyr_Carbon_LV_ProtonROI = max(signalPyr_Carbon_LV_ProtonROI);
@@ -162,11 +135,5 @@ for i = 1:length(thresholds)
    threshold_E_1 = current_threshold * max_signalPyr_Carbon_LV_ProtonROI;
    max_min_LV = threshold_E_1 + min_signalPyr_Carbon_LV_ProtonROI;
    background_Thresh = SUM_Pyr > max_min_LV;
-   threshold_E_1_all(i) = threshold_E_1;
-   max_min_LV_all(i) = max_min_LV;
-   background_Thresh_all{i} = background_Thresh;
-   maskThresh_threshold = mask2_original_ROI & background_Thresh;
-   [y_coords, x_coords] = find(maskThresh_threshold);
-   coords_all{i} = [y_coords, x_coords];  % Exported ROI coordinates are applied to the pyruvate image for subsequent analysis.
 end
 %%
