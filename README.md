@@ -1,8 +1,8 @@
-**This is a package of example code and data for the optimization of hyperpolarized left ventricular [1-13C]pyruvate signal detection for human cardiac metabolic imaging. 
+**This is a package of example code for the optimization of hyperpolarized left ventricular [1-13C]pyruvate signal detection for human cardiac metabolic imaging. 
 The code is used to: 
 (i) define the LV blood-pool and myocardial ROIs on a proton reference image, 
 (ii) define the 13C reconstruction grid, and 
-(iii) quantify the LV pyruvate signal distribution introducing an exponential (B-value) model and an optimized threshold model to select robust LV blood-pool ROI for downstream metabolic analysis (e.g., Lac+Bic in the mid-myocardium). The code is applied to 106 studies.** 
+(iii) quantify the LV pyruvate signal distribution introducing an exponential (B-value) model and an optimized threshold model to select robust LV blood-pool ROI for downstream metabolic analysis (e.g., Lac+Bic in the mid-myocardium).** 
 
 Please download the .zip file, unzip it, and check the MATLAB code. 
 
