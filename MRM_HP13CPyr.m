@@ -107,9 +107,6 @@ metabolic_zerofillimgB2_1(:,:) = abs(metabolic_zerofillimg_B_1).^2;
 Bic_FA =  metabolic_zerofillimgB2_1 ./ sinFA_Met;
 %%  CO-REGISTRATION (TRANSLATION) 
 % Estimate translation parameters to align 13C images to the proton reference.
-% imgShifter is assumed to return [rowShift, colShift] or similar.
-translationPlanP = imgShifter(metabolic_zerofillimg_Pyr_raw, fixedImage);
-translationPlanB = imgShifter(metabolic_zerofillimgB2_1, fixedImage);
 %%  SUM_Pyr PLACEHOLDER 
 % SUM_Pyr is the sum over 44 frames of Pyr_FA{1,kkk1}.
 matrixSize    = [pyruvate_recon_matrix, pyruvate_recon_matrix];
@@ -117,7 +114,6 @@ SUM_Pyr = zeros(matrixSize);
 for kkk1 = 1:44
     SUM_Pyr = SUM_Pyr + Pyr_FA{1, kkk1};
 end
-mask2_original_ROI = zeros(matrixSize);
 %% sorted_signalPyr
 signalPyr_Carbon_LV_ProtonROI = arrayfun(@(x, y) SUM_Pyr(y, x), coordinates_mask2(:, 2), coordinates_mask2(:, 1)); 
 max_signalPyr_Carbon_LV_ProtonROI = max(signalPyr_Carbon_LV_ProtonROI);
@@ -128,7 +124,6 @@ sorted_signalPyr = sort(signalPyr_Carbon_LV_ProtonROI, 'descend');
 %   threshold_E_1 = alpha * I_max 
 %   cutoff        = threshold_E_1 + I_min
 %   keep voxels where SUM_Pyr > cutoff
-% Then restrict to LV mask2_original to keep only LV ROI voxels.
 %% Cutoff formula for Blood pool ROI detection
 for i = 1:length(thresholds)
    current_threshold = thresholds(i);
