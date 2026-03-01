@@ -48,7 +48,6 @@ fixedImage = interpolated_proton;
 %% DRAW ROIs (LV EPIC / ENDO)
 % ROI #1: LV Epicardial contour (outer)
 % ROI #2: LV Endocardial contour (inner)
-% Myocardium should be: Epic minus Endo (i.e., outer ring).
 figure('Name','Draw ROIs on interpolated proton (100x100)');
 imagesc(fixedImage);
 axis image; axis on;
@@ -77,39 +76,22 @@ binaryMasks.binaryMask2 = binaryMask2;
 coordinates_mask1 = [row1, col1];          % epicardium coords
 [row2, col2]       = find(binaryMask2);
 coordinates_mask2  = [row2, col2];          % endocardium coords (LV blood pool ROI)
-%% mid-MYOCARDIUM 
-myoMask = binaryMask1 & ~binaryMask2;
-[rowM, colM]     = find(myoMask);
-myo_coordinates  = [rowM, colM];
 %% FLIP ANGLE CORRECTION FACTORS 
 % Store sin(FA) factors separately to avoid overwriting degrees.
 sinFA_Pyr = sin(deg2rad(flipAngle_Pyr_deg));
 sinFA_Met = sin(deg2rad(flipAngle_Met_deg));
 %% 13C DATA PLACEHOLDERS 
-% IMPORTANT:
 % The following variables must already exist in the workspace OR be loaded:
 %   - img_sum_pyr            : 2D pyruvate summary image or frame (raw/combined)
 %   - metabolic_PLB_inj1     : metabolite data array (e.g., [1, frame, x, y]%
-% Example:
-%   load('raw.mat'); load('workspace.mat'); etc.
 Pyr_raw = img_sum_pyr(:,:);
 extended_Pyr_raw = [Pyr_raw, zeros(size(Pyr_raw, 1), 1)];
 flipped_Pyr_raw = flipud(extended_Pyr_raw);
 metabolic_zerofillimg = double(zerofillimg(flipped_Pyr_raw, [100 100]));
 metabolic_zerofillimg_Pyr_raw = abs(metabolic_zerofillimg).^2;
 Pyr_FA =  metabolic_zerofillimg_Pyr_raw ./ sinFA_Pyr;
-%% Bic for Frame 16, for example
-B13Image(:,:) = metabolic_PLB_inj1(1, 16, :, :); %
-extended_B13Image = [B13Image, zeros(size(B13Image, 1), 1)];
-flip_carbonB_1 = flipud(extended_B13Image);
-metabolic_zerofillimg_B_1 = double(zerofillimg(flip_carbonB_1, [100 100]));
-metabolic_zerofillimgB2_1(:,:) = abs(metabolic_zerofillimg_B_1).^2;
-Bic_FA =  metabolic_zerofillimgB2_1 ./ sinFA_Met;
 %%  CO-REGISTRATION (TRANSLATION) 
 % Estimate translation parameters to align 13C images to the proton reference.
-% imgShifter is assumed to return [rowShift, colShift] or similar.
-translationPlanP = imgShifter(metabolic_zerofillimg_Pyr_raw, fixedImage);
-translationPlanB = imgShifter(metabolic_zerofillimgB2_1, fixedImage);
 %%  SUM_Pyr PLACEHOLDER 
 % SUM_Pyr is the sum over 44 frames of Pyr_FA{1,kkk1}.
 matrixSize    = [pyruvate_recon_matrix, pyruvate_recon_matrix];
@@ -117,7 +99,6 @@ SUM_Pyr = zeros(matrixSize);
 for kkk1 = 1:44
     SUM_Pyr = SUM_Pyr + Pyr_FA{1, kkk1};
 end
-mask2_original_ROI = zeros(matrixSize);
 %% sorted_signalPyr
 signalPyr_Carbon_LV_ProtonROI = arrayfun(@(x, y) SUM_Pyr(y, x), coordinates_mask2(:, 2), coordinates_mask2(:, 1)); 
 max_signalPyr_Carbon_LV_ProtonROI = max(signalPyr_Carbon_LV_ProtonROI);
@@ -128,7 +109,6 @@ sorted_signalPyr = sort(signalPyr_Carbon_LV_ProtonROI, 'descend');
 %   threshold_E_1 = alpha * I_max 
 %   cutoff        = threshold_E_1 + I_min
 %   keep voxels where SUM_Pyr > cutoff
-% Then restrict to LV mask2_original to keep only LV ROI voxels.
 %% Cutoff formula for Blood pool ROI detection
 for i = 1:length(thresholds)
    current_threshold = thresholds(i);
