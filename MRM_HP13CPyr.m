@@ -1,12 +1,11 @@
 %% LV_ROI_thresholding_pipeline.m
 %   1) Load a proton DICOM image (reference anatomy).
-%   2) Interpolate proton image onto the 13C (pyruvate/metabolite) grid.
-%   3) Draw LV Epicardial + Endocardial ROIs manually and derive myocardium.
-%   4) Extract a mid-myocardium ring.
-%   5) Reconstruct / flip-angle-correct 13C images (pyruvate + metabolite).
-%   6) Co-register 13C images to proton reference (translation model).
-%   7) Compute sorted LV blood-pool signal distribution.
-%   8) Cutoff formula.
+%   2) Interpolate proton image onto the 13C (pyruvate) grid.
+%   3) Draw LV Epicardial + Endocardial ROIs manually.
+%   4) Reconstruct / flip-angle-correct 13C images (pyruvate).
+%   5) Co-register 13C images to proton reference (translation model).
+%   6) Compute sorted LV blood-pool signal distribution.
+%   7) Cutoff formula.
 % Repository:
 %   cor-utsw/hyperpolarized-13C
 % Author:
@@ -77,10 +76,6 @@ binaryMasks.binaryMask2 = binaryMask2;
 coordinates_mask1 = [row1, col1];          % epicardium coords
 [row2, col2]       = find(binaryMask2);
 coordinates_mask2  = [row2, col2];          % endocardium coords (LV blood pool ROI)
-%% mid-MYOCARDIUM 
-myoMask = binaryMask1 & ~binaryMask2;
-[rowM, colM]     = find(myoMask);
-myo_coordinates  = [rowM, colM];
 %% FLIP ANGLE CORRECTION FACTORS 
 % Store sin(FA) factors separately to avoid overwriting degrees.
 sinFA_Pyr = sin(deg2rad(flipAngle_Pyr_deg));
@@ -90,8 +85,6 @@ sinFA_Met = sin(deg2rad(flipAngle_Met_deg));
 % The following variables must already exist in the workspace OR be loaded:
 %   - img_sum_pyr            : 2D pyruvate summary image or frame (raw/combined)
 %   - metabolic_PLB_inj1     : metabolite data array (e.g., [1, frame, x, y]%
-% Example:
-%   load('raw.mat'); load('workspace.mat'); etc.
 Pyr_raw = img_sum_pyr(:,:);
 extended_Pyr_raw = [Pyr_raw, zeros(size(Pyr_raw, 1), 1)];
 flipped_Pyr_raw = flipud(extended_Pyr_raw);
